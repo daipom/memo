@@ -1,0 +1,355 @@
+* 目次
+  {{一般}}
+  {{vim}}
+  {{Cacoo}}
+  {{visual studio}}
+  {{sublime text}}
+  {{git}}
+  {{svn}}
+  {{cs}}
+  {{powershell}}
+  {{python}}
+
+* 一般
+  --- sqlite
+    - トランザクション
+      - Serializable中もReadCommittedからは読める
+      - ただしコミットの瞬間は待ちになる
+    - 詳細
+      - sqliteには、dbのロック状態と、トランザクション命令の2つを抑える必要があり、さらにC#のライブラリのトランザクションレベルとの対応を抑えねばならない
+      - トランザクション対応
+        -  :DEFERRED: <-> :ReadCommitted:
+          - 実際に最初に読込処理が走るタイミングで :Sharedロック: 、最初に書き込み処理が走るタイミングで :Reservedロック: を貼る
+        -  :IMMEDIATE: <-> :Serializable:
+          - 即座に :Reservedロック: を貼る
+      -  :Reservedロック: は同時に1プロセスしか取得できない。
+      - コミットの瞬間に :Exclusiveロック: 状態に遷移する
+        - よってコミット処理中は :ReadCommitted: による読込は待たされる
+        - また、コミットしようとする時に :ReadCommitted: による :Sharedロック: が貼られている場合、それが終わるまでコミットが待たされる
+          - さらに悪いことに、その :Sharedロック: が :Reservedロック: を取得待機していた場合、デッドロックになる( :ReadCommitted: の中で書込処理をしてはいけない理由)
+      - 参考URL
+        - [[http://kurokawh.blogspot.jp/2013/11/sqlite-sqlite.html]]
+        - [[https://qiita.com/Yuki_312/items/7a7dff204e67af0c613a]]
+
+  --- パフォーマンスカウンタ
+    ~ .NET CLR Memory でgen2のヒープとか取れる
+      - これがカウンタにないとき [[https://qiita.com/hority/items/b08d7b28ddff53f96c6b]]
+    ~ カウンターセット一覧
+      - Get-Counter -ListSet *
+    ~ セットの中のカウンタ列挙
+      - セット一覧から取得してきた特定のインスタンスに対してCounterプロパティを叩く
+  --- jupyter
+    - remote [[https://qiita.com/morningyrp/items/ac16158801c0589cb05a]]
+      - 許容IPとパスワードだけ設定すれば簡単にリモートできる
+  --- VS module
+    - Enhanced Syntax Highlighting
+    - Hide Main Menu
+    - KyuuBackground 
+    - viasfora
+    - smooth caret
+    - Toggle Comment
+    - File path on Footer
+    - Customize Visual studio window title
+    - code block end tag
+    - gradient selection
+
+* vim
+  --- command
+    - di" : ""内の単語削除
+    - w : next word
+    - b : back word
+  --- powershellとの連携
+    - powershellでchcp 65001をしてutf-8にすると、vimの表示がバグる
+    - vimrcに次を追加することで対応可能
+      ~ set encoding=utf-8
+
+* Cacoo
+
+* visual studio
+  - shortcut
+    --- reshape code
+      ~ Ctrl + K, Ctrl + D
+    --- select word
+      ~ Ctrl + W
+      - 連打すると範囲を広げていける
+    --- code folding
+      ~ Ctrl + M + M
+        - fold or unfold current section
+      ~ Ctrl + M + O
+        - fold to definition level
+      ~ Ctrl + M + L
+        - fold or unfold All
+    --- multi cursor
+      ~ Shift + Alt + 矢印(click)
+          - 矩形編集
+      ~ Alt + click
+          - multi cursor
+    --- bookmark
+      ~ Ctrl + K + K
+        - register bookmark
+      ~ Ctrl + K + N
+        - next bookmark
+      ~ Ctrl + B + C
+        - cancel all bookmarks
+    --- method list
+      ~ Ctrl + F2, Tab, Tab
+    --- 対話型モード
+      ~ Ctrl + E, Ctrl + E
+
+* sublime text
+  - default
+    --- Ctrl + Shift + M: expand range selection
+    --- Ctrl + Shift + A: Select Tag
+    --- Ctrl + K, Ctrl+num: code-folding
+    --- Ctrl + K, Ctrl+J: code-all-unfolding
+    --- Ctrl + U: soft-undo 
+    --- Ctrl + Shift + [: fold
+    --- Ctrl + Shift + ]: unfold
+    --- Alt + F3: all select
+    --- Ctrl + R: Goto Symbol
+    --- Alt + Shift + W: タグ囲み
+  - Expand Selection to WhiteSpace: 
+    --- Ctrl + Shift + X
+  - OmniMarkupPreviewer
+    --- Ctrl+Alt+O: Preview Markup in Browser.
+    --- Ctrl+Alt+X: Export Markup as HTML.
+    --- Ctrl+Alt+C: Copy Markup as HTML.
+  - HTML/CSS/JS Prettify
+    --- Ctrl+Shift+H: テキスト整形
+  - Pandoc
+    - コマンドパレットからPandoc実行して変換選ぶだけ
+    - Pandocが対応している形式を、設定編集することで実装可能
+  - Table Editor
+    - コマンドパレットから this view に対して有効にする
+    - 基本的にはTabでバシバシ動いてくれる
+    - CSVをテーブルにするには、選択して以下でできる
+      --- Ctrl+k, |
+    - url: [[https://github.com/vkocubinsky/SublimeTableEditor]]
+    - 正規表現
+      - Count値抽出正規表現
+        .*Count:(.*)"
+        $1
+  - 正規表現抽出
+    .*Count:(.*)"
+    $1
+
+* git
+  - use
+    --- 新レポジトリを0から作成  
+      ~ サーバ上で新規レポジトリを作成してからローカルでclone
+    --- ローカルの既存データをレポジトリ化  
+      ~ ローカルでinitしてローカルレポジトリを作成。
+      ~ add, commitを行ってpushの準備。
+      ~ サーバ上で新レポジトリを空で作成してurlを取ってくる。
+      ~ ローカルレポジトリでremote addでurlを設定。
+      ~ git push -u origin masterして、リモートレgitポジトリに反映。
+    --- リモートのレポジトリをローカルに。次の2種類
+      - clone
+        - submoduleのあるレポジトリの場合は、以下のオプションをつける
+          ~ --recurse-submodules
+      - pull  
+        ~ git initしてローカルリポジトリを作成。その後remote addでurl設定したら、git pull origin master。
+    --- ファイルの変更を取り消す
+      ~ git checkout file
+      ~ git checkout .
+    --- コミットを取り消す
+      ~ git reset --hard HEAD^
+    --- ブランチ
+      - ローカル一覧
+        ~ git branch
+      - リモート一覧
+        ~ git branch -r
+      - 新規にチェンジ
+        ~ git branch -b branchname
+      - 既存にチェンジ
+        ~ git branch branchname
+  - commands
+    --- clone: 配下にレポジトリのフォルダが作成されてその下に入るので自分で専用フォルダをあらかじめ作る必要は無い。
+      ~ git clone uri --recurse-submodules
+    --- submodule: 
+      - 追加: 追加したいgit repositoryの中で実行
+        ~ git submodule add uri
+      - 更新: .gitmodulesがあるディレクトリで(モジュール内ではなくて、親で)
+        - 実際にsubmoduleのバージョンを上げたRepo
+          ~ git submodule update --remote
+          この更新を忘れずにコミットすること。
+        - 他でsubmoduleのバージョンが上がったRepo
+          全体をpullした後で、
+          ~ git submodule update
+          当然こちらはコミットしない
+        - とりあえずこれでsubmoduleを最新にすることはできるが、上2手法でちゃんと管理した方が安心
+          ~ git submodule foreach git pull origin master
+      - ローカル変更取り消し: .gitmodulesがあるディレクトリで(モジュール内ではなくて、親で)
+        ~ git submodule update --init -f
+    --- add
+      ~ git add file
+    --- commit
+      ~ git commit -m "message"
+    --- push
+      ~ git push origin master
+    --- init
+      ~ git init
+    --- remote add 
+      ~ git remote add origin "url"
+    --- merge
+      ~ git merge --no-ff origin/tobita
+    --- conflict
+      - 以下のcheckout系は要注意。マージ結果に対して作用するわけではない。本当に完全にどちらかになってしまう。
+        ~ git checkout --theirs {filename}
+        ~ git checkout --ours {filename}
+      - 実際に編集するか、git mergetool なるものが使えるらしい。
+      - 解決後通常通りadd, commit, push, すれば、普通にプルリクを取り込める
+
+* svn
+  - svn info
+  - svn log -l 5
+  - svn st
+    変に?になっているファイルはadd忘れな可能性が高い
+  - svn st | sls -n "\?"
+  - svn add "path"
+  - svn up
+  - svn revert "path"
+  - svn diff
+  - svn delete
+  --- patch作成
+   ~ svn diff | Out-File "filepath" -Encoding utf8
+  --- "?"全削除
+    ~ svn st | %{($_ -split " ")[-1]} | rm
+
+* cs
+  --- ロック
+    - lockObjはstaticである必然はない。複数のインスタンス間で排他したければstatic。
+    - 基本はlock句を使用。using句と同様で安全な処理。
+    - ロック取得待機をしたくなければ、Monitor.TryEnterが便利。
+  --- foreach
+      ~ インデックスも混ぜてループ
+        foreach (var item in list.Select((v, i) => new { Value = v, Index = i }))
+      ~ keyとvalueのペアでループ
+        foreach (KeyValuePair<string, string> pair in sampleDict) {
+          Console.WriteLine(string.Format("Key : {0} / Value : {1}", pair.Key, pair.Value));
+        }
+
+* powershell
+  - xml処理
+    :1:
+      $xmlfile = [xml](cat "ace_config.xml" -Encoding UTF8)
+      $accessLogBackupConfigs =
+        $xmlfile.AceConfig.Converter.AccessLogBackupConfigManager.AccessLogBackupConfigs.AccessLogBackupConfig
+      $accessLogBackupConfigs | %{f
+        if ($_.OutputsYearsFolder -eq "false") {
+        }
+      }
+    :2:
+      ([xml](cat .\ace_config.xml -Encoding UTF8)).AceConfig.ScheduleTaskList.ALogTaskConfig[-1].Schedules.ScheduleItem
+    --- ナビゲータ-
+      .CreateNavigator()
+  - イベントログ
+    Get-EventLog Security -Newest 5
+    Get-EventLog Application -Newest 1000 | ?{$_.EntryType -eq "Error" } | % -Begin{$count=0} -Process{echo $_; $count++; if($count -eq 10){break};}
+
+  - 統計値計算
+    --- csvラインから
+      ~ "10,20,30" -split "," | Measure-Object -max
+    --- csvファイルを読みこんで
+      ~ Import-Csv C:\Users\fukuda\Desktop\tmprec.csv -Header "time","value" | Measure-Object value  -max -Average
+    --- 条件を満たすオブジェクトの個数取得
+      ~ Import-Csv "file.csv" -Header "time","value" | ?{$_.value -eq 0} | Measure-Object
+    --- csvのあるカラムのユニークな個数
+      ~ Import-Csv 'file.csv' | Sort "ユーザー" -Unique | Measure-Object
+  - 配下のファイルだけ再帰的に全検索
+    ~ ls -Recurse | ?{$_.Mode -notmatch "d"}
+  - 圧縮
+    --- 単体ファイルを圧縮。replaceの拡張子に注意する。
+      ~ Compress-Archive "fileName.csv" -DestinationPath ("fileName.csv" -replace "csv","zip")
+    --- 自作スクリプト利用
+      - 単体ファイル圧縮。(拡張子の部分を自動判定してzipに置換して出力)
+        ~ zipOneFile "fileName.csv"
+      - 直下全ファイルをそれぞれ圧縮。(拡張子の部分を自動判定してzipに置換して出力。ディレクトリは自動で除く)
+        ~ zipEachFile
+      - 直下のファイルをフィルタしてそれぞれ圧縮。
+        ~ getFileNameList -Like *csv | %{zipOneFile $_}
+  - 展開
+    ~ Expand-Archive
+  - utf8 with BOM であればPSで日本語を扱える
+  - 出力文字列化
+    ~ (情報出力処理) | Out-String -s | (文字列処理)
+  - 反復処理
+    ~ 0..5 | % { New-Item test$_.txt}
+  - net
+    ~ net use \\remote-hostname\share-dir /user:username
+  - process
+    ~ Get-WmiObject Win32_Process | ?{$_.Name -match "python"} | %{$_.Name; $_.CommandLine; $_.ProcessId; ""}
+
+* python
+  - 複数引数map
+    ~ map(lambda df, path: (df, path), df_list, pathlist)
+  - raw文字列
+    - 特殊文字無視
+    ~ r"\a\b\c.csv"
+  - 多次元リストスライス(numpy配列に限る模様)
+    ~ [[x, y, z], [], [], ...]
+      ~ [:,0] -> [x,x,...]
+        まず「:」で全リストを列挙して、その中の0番要素を並べるということ
+  - pandas
+    - 表示省略対策
+      - pd.set_option("display.max_colwidth", 400)
+      - pd.set_option('display.max_columns', None)
+      - pd.set_option('display.max_rows', None)
+    - 特定カラムのリスト抽出
+      - df["hoge"].tolist()
+      - df["hoge"].values()
+      - 何が違うんだっけ、、、
+    - 特定カラムでソートして、インデックスを振り直す
+      - df.sort_values(by="hoge", ascending=False).reset_index(drop=True)
+    - dictionaryからseries初期化
+     - Series(dict(zip([time(hour=hour) for hour in range(0, 24)], [0] * 24)))
+    - datetimeへ変換する
+      - pd.to_datetime([...])
+    - 時系列indexの際に、特定の期間でサマる
+      - df.resample("H").sum()
+    - 移動平均
+      - df.rolling(window=5, center=True, min_periods=1, win_type="triang").mean()
+    - 特定のインデックスにseriesを代入
+      - df[index] = series
+    - series同士の合成
+      - series.combine_first(base_series)
+    - DataFrameのcsvファイル読込
+      - pd.read_csv(path, skip_rows=1, names=[headers], encoding="utf-8", engine="python")
+        - engineにpythonを指定すると、速度は落ちるが日本語パスに対処できる
+    - DataFrameのカラムに対して絞る
+      - df.T[start_date:end_date].T
+    - DataFrameを各カラム毎にイテレート
+      - for target_date, dataseries in score_df.iteritems():
+    - DataFrameにレコードを追加
+      - df = df.append(Series(data=data_list, index=column_list), ignore_index=True)
+    - インデックスでソート。(インデックスに日時を用いているケースなどで有用)
+      - df = df.sort_index(axis=1)
+    - 文字列カラムから日時イテレータに
+      - df.iloc[:, 0].apply(lambda d: datetime.datetime.strptime(d, time_format))
+  - jupyter
+    - store系
+      -  [[http://moqada.hatenablog.com/entry/20090206/1233935560]]
+      - 保存
+        - store a
+      - 一覧
+        - store
+      - 復元
+        - store -r a
+    - plotly
+      import plotly.offline as py
+      import plotly.graph_objs as go
+      py.init_notebook_mode(connected=True)
+
+      fig = go.Figure(
+          data=[
+              go.Scatter(
+                  name="第1特徴量",
+                  x=features_nonzero,
+                  y=coef_nonzero,
+                  mode="markers",
+              ),
+          ],
+          layout=layout
+      )
+      py.iplot(fig)
+
