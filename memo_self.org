@@ -141,7 +141,7 @@
       ~ ローカルでinitしてローカルレポジトリを作成。
       ~ add, commitを行ってpushの準備。
       ~ サーバ上で新レポジトリを空で作成してurlを取ってくる。
-      ~ ローカルレポジトリでremote addでurlを設定。
+      ~ ローカルレポジトリでremote addでurlを設定。 [git remote add origin <url>]
       ~ git push -u origin masterして、リモートレgitポジトリに反映。
     --- リモートのレポジトリをローカルに。次の2種類
       - clone
