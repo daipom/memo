@@ -9,6 +9,8 @@
   {{cs}}
   {{powershell}}
   {{python}}
+  {{DB}}
+  {{etc}}
 
 * 一般
   --- sqlite
@@ -132,6 +134,15 @@
   - 正規表現抽出
     .*Count:(.*)"
     $1
+  - Rainbow Csv
+    - rbql
+      - 長すぎるクエリはパースに不具合が生じることがあるので、多段にやるとよい
+      select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour, a6.split()[1].split(":")[1]
+      where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 5) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 12)
+
+      select a1, a2, SUM(a3) group by a1, a2
+
+      - 行数の場合は COUNT(*) も使える
 
 * git
   - use
@@ -166,6 +177,8 @@
   - commands
     --- clone: 配下にレポジトリのフォルダが作成されてその下に入るので自分で専用フォルダをあらかじめ作る必要は無い。
       ~ git clone uri --recurse-submodules
+      - 特定のパスを指定したい場合
+        ~ git clone uri path
     --- submodule: 
       - 追加: 追加したいgit repositoryの中で実行
         ~ git submodule add uri
@@ -199,6 +212,8 @@
         ~ git checkout --ours {filename}
       - 実際に編集するか、git mergetool なるものが使えるらしい。
       - 解決後通常通りadd, commit, push, すれば、普通にプルリクを取り込める
+  - 資格情報
+    - 資格情報マネージャ
 
 * svn
   - svn info
@@ -225,11 +240,29 @@
       ~ インデックスも混ぜてループ
         foreach (var item in list.Select((v, i) => new { Value = v, Index = i }))
       ~ keyとvalueのペアでループ
-        foreach (KeyValuePair<string, string> pair in sampleDict) {
-          Console.WriteLine(string.Format("Key : {0} / Value : {1}", pair.Key, pair.Value));
+        foreach (var pair in sampleDict) {
         }
+  --- 辞書
+    ~ 値の追加
+      - 上書き
+        dic[key] = value
+      - 重複したらexception
+        dic.add(key, value)
+    ~ リストから辞書へ
+      dataList.ToDictionary(data => data.key, data => data.value);
+  --- GroupBy
+    ~ Count集計
+      dataList.GroupBy(data => data.keyItem).Select(group => new { Key = group.Key, Count = group.Count() })
+    ~ Sum集計
+      dataList.GroupBy(data => data.keyItem).Select(group => new { Key = group.Key, Sum = group.Select(data => data.value).Sum() })
+  --- Array
+    ~ 特定の型のリストへキャスト
+      Enum.GetValues(typeof(ReportDayOfWeek)).Cast<ReportDayOfWeek>()
+        ReportDayOfWeekというEnumからArrayを抽出し、それをReportDayOfWeek型のリストへ
 
 * powershell
+  - パイプテク
+    ~ | select-object -first 5
   - xml処理
     :1:
       $xmlfile = [xml](cat "ace_config.xml" -Encoding UTF8)
@@ -246,7 +279,9 @@
   - イベントログ
     Get-EventLog Security -Newest 5
     Get-EventLog Application -Newest 1000 | ?{$_.EntryType -eq "Error" } | % -Begin{$count=0} -Process{echo $_; $count++; if($count -eq 10){break};}
-
+    Get-EventLog -List
+    Clear-EventLog Security
+    Get-EventLog Application | Format-List
   - 統計値計算
     --- csvラインから
       ~ "10,20,30" -split "," | Measure-Object -max
@@ -256,7 +291,7 @@
       ~ Import-Csv "file.csv" -Header "time","value" | ?{$_.value -eq 0} | Measure-Object
     --- csvのあるカラムのユニークな個数
       ~ Import-Csv 'file.csv' | Sort "ユーザー" -Unique | Measure-Object
-  - 配下のファイルだけ再帰的に全検索
+  - 配下のファイルだけ再帰的に 全検索
     ~ ls -Recurse | ?{$_.Mode -notmatch "d"}
   - 圧縮
     --- 単体ファイルを圧縮。replaceの拡張子に注意する。
@@ -279,6 +314,19 @@
     ~ net use \\remote-hostname\share-dir /user:username
   - process
     ~ Get-WmiObject Win32_Process | ?{$_.Name -match "python"} | %{$_.Name; $_.CommandLine; $_.ProcessId; ""}
+  - オブジェクト情報
+    ~ $hoge | %{Select-Object Name,OutputType,IsOutputPDF,IsOutputCsv,OutputTarget -InputObject $_}
+  - diff比較
+    $a = ls hoge
+    $b = ls foo
+    Compare-Object $a $b
+  - 正規表現
+    - ログファイルから時刻抽出
+      ~ sls "^([0-9\-]+ [0-9\:]+)\..*$" file.log | %{$_.Matches.Groups[1].Value}
+      - ()でグループを作っておけば、ヒット結果オブジェクトに対するForEachの中で、 Matches.Groups[].Value を用いることで抽出できる。
+      - ただし、Groupsのインデックスは、0番目にはヒット全体が入るので、グループは1番目からになることに注意
+    - ログファイルから特定の時刻区間のログを抽出
+      ~  sls "^([0-9\-]+ [0-9\:]+)\..*$" file.log | ?{$dt=[DateTime]$_.Matches.Groups[1].Value; $dt -ge [DateTime]"2019-02-19 06:14:47" -and $dt -le [DateTime]"2019-02-19 07:11:24"} | select Line > extracted.log
 
 * python
   - 複数引数map
@@ -290,11 +338,18 @@
     ~ [[x, y, z], [], [], ...]
       ~ [:,0] -> [x,x,...]
         まず「:」で全リストを列挙して、その中の0番要素を並べるということ
+  - datetime
+    - elapsed
+      ~ (datetime1 - datetime2).total_seconds()
   - pandas
-    - 表示省略対策
+    - 表示省略対策1
       - pd.set_option("display.max_colwidth", 400)
       - pd.set_option('display.max_columns', None)
       - pd.set_option('display.max_rows', None)
+    - 初期化
+      - 列単位でリスト指定して初期化したい場合
+        ~ DataFrame(data=[list1, list2, list3], index=[col1, col2, col3]).T
+        - よく理解していないが、基本的には行単位での指定になってしまうので、indexの方にカラム名振っておいて最後に転置すれば上手くできる
     - 特定カラムのリスト抽出
       - df["hoge"].tolist()
       - df["hoge"].values()
@@ -309,8 +364,12 @@
       - df.resample("H").sum()
     - 移動平均
       - df.rolling(window=5, center=True, min_periods=1, win_type="triang").mean()
-    - 特定のインデックスにseriesを代入
+    - 特定のカラムにseriesを代入(新規カラムも可能)
       - df[index] = series
+    - DataFrameにレコードを追加
+      - df = df.append(Series(data=data_list, index=column_list), ignore_index=True)
+      - 特定のインデックスを指定する場合には
+        - df = df.append(Series(data=data_list, name=name))
     - series同士の合成
       - series.combine_first(base_series)
     - DataFrameのcsvファイル読込
@@ -320,12 +379,24 @@
       - df.T[start_date:end_date].T
     - DataFrameを各カラム毎にイテレート
       - for target_date, dataseries in score_df.iteritems():
-    - DataFrameにレコードを追加
-      - df = df.append(Series(data=data_list, index=column_list), ignore_index=True)
     - インデックスでソート。(インデックスに日時を用いているケースなどで有用)
       - df = df.sort_index(axis=1)
     - 文字列カラムから日時イテレータに
       - df.iloc[:, 0].apply(lambda d: datetime.datetime.strptime(d, time_format))
+    - カラム型変換
+      - df.hoge = df.hoge.astype(float)
+    - group by
+      - df.groupby(by=["hoge", "foo"]).mean().sort_values(by="value", ascending=False)
+      - 単キーの場合はリストじゃなくてよい。
+      - object型カラムがあると数値だと認識してくれないことがある。必ず数値は型をあらかじめセットしておくこと。
+      - カウントを記録するためのカラムが元々ないケース
+        - 普通に追加
+          df["count"] = Series([0] * len(df.shape[0]))
+        - おしゃれに追加
+          df["count"] = Series()
+          df["count"].fillna(0, inplace=True)
+
+
   - jupyter
     - store系
       -  [[http://moqada.hatenablog.com/entry/20090206/1233935560]]
@@ -353,3 +424,51 @@
       )
       py.iplot(fig)
 
+* DB
+  - 外部結合
+    - 左か右か
+      - JOINを中心に見た時に、優先する方を指し示している
+      - 左が自分、右が結合先
+
+* etc
+  - raibow csv samples
+    select * order by int(a4) DESC
+
+    select a6.split()[0].split(":")[1], a6.split()[1].split(":")[1], a6.split()[2].split(":")[1], SUM(a6.split()[1].split(":")[1]) group by a6.split()[0].split(":")[1], a6.split()[1].split(":")[1], a6.split()[2].split(":")[1]
+
+    select COUNT(*), [lv for lv in a6.split() if "Count:" in lv][0].split(":")[1], [lv for lv in a6.split() if "AppName:" in lv][0].split(":")[1], [lv for lv in a6.split() if "ClientName:" in lv][0].split(":")[1] where "AppName:" in a6 and "ClientName:" in a6 group by [lv for lv in a6.split() if "Count:" in lv][0].split(":")[1], [lv for lv in a6.split() if "AppName:" in lv][0].split(":")[1], [lv for lv in a6.split() if "ClientName:" in lv][0].split(":")[1]
+
+    select [lv for lv in a6.split() if "AppName:" in lv][0].split(":")[1], [lv for lv in a6.split() if "ClientName:" in lv][0].split(":")[1], [lv for lv in a6.split() if "ClientIP:" in lv][0].split(":")[1] where "AppName:" in a6 and "ClientName:" in a6
+
+    select a6.split()[2].split(":")[1]
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 2) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 3)
+
+-- 日次・時別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour, COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 2) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 3)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour
+
+-- 週次・時別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour, COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 5) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 12)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour
+
+-- 週次・曜日別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').weekday(), COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 5) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 12)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').weekday()
+
+-- 月次・時別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour, COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 1) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 15)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').hour
+
+-- 月次・曜日別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').weekday(), COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 1) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 15)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').weekday()
+
+-- 月次・日別
+select a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').day, COUNT(*)
+where datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') > datetime.datetime(2018, 11, 1) and datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S') < datetime.datetime(2018, 11, 15)
+group by a6.split()[2].split(":")[1], datetime.datetime.strptime(a1.split(".")[0], '%Y/%m/%d %H:%M:%S').day
